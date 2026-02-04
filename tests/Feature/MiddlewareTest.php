@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-use Grazulex\ApiIdempotency\Contracts\StorageDriverInterface;
 use Grazulex\ApiIdempotency\Events\IdempotentPayloadMismatch;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestProcessed;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestReplayed;
 use Grazulex\ApiIdempotency\Http\Middleware\IdempotentMiddleware;
 use Grazulex\ApiIdempotency\IdempotencyManager;
-use Grazulex\ApiIdempotency\Support\IdempotencyRecord;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
