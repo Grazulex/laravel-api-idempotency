@@ -13,3 +13,4 @@ Thumbs.db
 coverage/
 build/
 /backlog/
+*-spec.md
