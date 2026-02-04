@@ -1,0 +1,105 @@
+{
+    "name": "grazulex/laravel-api-idempotency",
+    "description": "RFC-compliant idempotency support for Laravel APIs - Prevent duplicate operations, ensure safe retries",
+    "keywords": [
+        "laravel",
+        "api",
+        "idempotency",
+        "idempotent",
+        "retry",
+        "duplicate",
+        "rfc",
+        "middleware"
+    ],
+    "homepage": "https://github.com/grazulex/laravel-api-idempotency",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jean-Marc Strauven",
+            "email": "jms@grazulex.be",
+            "homepage": "https://grazulex.be",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/http": "^11.0|^12.0",
+        "illuminate/routing": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/cache": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.22",
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "rector/rector": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Grazulex\\ApiIdempotency\\": "src/"
+        },
+        "files": [
+            "src/Support/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Grazulex\\ApiIdempotency\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "lint": "pint -v",
+        "test:lint": "pint --test -v",
+        "test:types": "phpstan analyse",
+        "test:unit": "pest --colors=always",
+        "test": [
+            "@test:lint",
+            "@test:types",
+            "@test:unit"
+        ],
+        "full": [
+            "@test:lint",
+            "@test:types",
+            "@test:unit"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Grazulex\\ApiIdempotency\\ApiIdempotencyServiceProvider"
+            ],
+            "aliases": {
+                "Idempotency": "Grazulex\\ApiIdempotency\\Facades\\Idempotency"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "support": {
+        "issues": "https://github.com/grazulex/laravel-api-idempotency/issues",
+        "source": "https://github.com/grazulex/laravel-api-idempotency",
+        "docs": "https://github.com/grazulex/laravel-api-idempotency#readme"
+    }
+}

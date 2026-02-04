@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('idempotency_keys', function (Blueprint $table) {
+            $table->id();
+            $table->string('key', 255);
+            $table->string('scope')->nullable();
+            $table->string('fingerprint', 64)->nullable();
+            $table->string('method', 10);
+            $table->string('path', 500);
+            $table->unsignedSmallInteger('status_code');
+            $table->json('response_headers')->nullable();
+            $table->longText('response_body')->nullable();
+            $table->unsignedInteger('response_size')->default(0);
+            $table->enum('state', ['processing', 'completed', 'failed'])->default('processing');
+            $table->timestamp('locked_until')->nullable();
+            $table->timestamp('created_at');
+            $table->timestamp('expires_at');
+
+            $table->unique(['key', 'scope']);
+            $table->index(['state', 'locked_until']);
+            $table->index('expires_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('idempotency_keys');
+    }
+};

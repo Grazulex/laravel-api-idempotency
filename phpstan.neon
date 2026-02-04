@@ -1,0 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+    level: 5
+    ignoreErrors:
+        - '#Aws\\DynamoDb#'
+        - '#Access to an undefined property.*team_id#'
+        - '#Access to an undefined property.*tenant_id#'
+        - '#Using nullsafe property access#'
