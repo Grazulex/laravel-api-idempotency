@@ -6,8 +6,10 @@ use Grazulex\ApiIdempotency\Events\IdempotentConflictDetected;
 use Grazulex\ApiIdempotency\Events\IdempotentPayloadMismatch;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestProcessed;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestReplayed;
+use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Queue\SerializesModels;
 
 it('creates IdempotentRequestProcessed event', function () {
     $request = Request::create('/api/test', 'POST');
@@ -98,28 +100,28 @@ it('creates IdempotentPayloadMismatch event', function () {
 
 it('events use Dispatchable trait', function () {
     expect(class_uses(IdempotentRequestProcessed::class))
-        ->toContain(Illuminate\Foundation\Events\Dispatchable::class);
+        ->toContain(Dispatchable::class);
 
     expect(class_uses(IdempotentRequestReplayed::class))
-        ->toContain(Illuminate\Foundation\Events\Dispatchable::class);
+        ->toContain(Dispatchable::class);
 
     expect(class_uses(IdempotentConflictDetected::class))
-        ->toContain(Illuminate\Foundation\Events\Dispatchable::class);
+        ->toContain(Dispatchable::class);
 
     expect(class_uses(IdempotentPayloadMismatch::class))
-        ->toContain(Illuminate\Foundation\Events\Dispatchable::class);
+        ->toContain(Dispatchable::class);
 });
 
 it('events use SerializesModels trait', function () {
     expect(class_uses(IdempotentRequestProcessed::class))
-        ->toContain(Illuminate\Queue\SerializesModels::class);
+        ->toContain(SerializesModels::class);
 
     expect(class_uses(IdempotentRequestReplayed::class))
-        ->toContain(Illuminate\Queue\SerializesModels::class);
+        ->toContain(SerializesModels::class);
 
     expect(class_uses(IdempotentConflictDetected::class))
-        ->toContain(Illuminate\Queue\SerializesModels::class);
+        ->toContain(SerializesModels::class);
 
     expect(class_uses(IdempotentPayloadMismatch::class))
-        ->toContain(Illuminate\Queue\SerializesModels::class);
+        ->toContain(SerializesModels::class);
 });
