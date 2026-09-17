@@ -5,6 +5,9 @@ declare(strict_types=1);
 use Grazulex\ApiIdempotency\Events\IdempotentPayloadMismatch;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestProcessed;
 use Grazulex\ApiIdempotency\Events\IdempotentRequestReplayed;
+use Grazulex\ApiIdempotency\Exceptions\InvalidKeyException;
+use Grazulex\ApiIdempotency\Exceptions\MissingKeyException;
+use Grazulex\ApiIdempotency\Exceptions\PayloadMismatchException;
 use Grazulex\ApiIdempotency\Http\Middleware\IdempotentMiddleware;
 use Grazulex\ApiIdempotency\IdempotencyManager;
 use Illuminate\Http\Request;
@@ -56,7 +59,7 @@ it('rejects invalid key format', function () {
     $middleware = app(IdempotentMiddleware::class);
 
     $middleware->handle($request, fn () => new Response('OK', 200));
-})->throws(\Grazulex\ApiIdempotency\Exceptions\InvalidKeyException::class);
+})->throws(InvalidKeyException::class);
 
 it('requires key when configured', function () {
     config(['api-idempotency.key.required' => true]);
@@ -65,7 +68,7 @@ it('requires key when configured', function () {
     $middleware = app(IdempotentMiddleware::class);
 
     $middleware->handle($request, fn () => new Response('OK', 200));
-})->throws(\Grazulex\ApiIdempotency\Exceptions\MissingKeyException::class);
+})->throws(MissingKeyException::class);
 
 it('passes through when disabled', function () {
     config(['api-idempotency.enabled' => false]);
@@ -141,7 +144,7 @@ it('detects payload mismatch on key reuse', function () {
     $request2->headers->set('Idempotency-Key', $key);
 
     expect(fn () => $middleware->handle($request2, fn () => new Response('{"id": 2}', 201)))
-        ->toThrow(\Grazulex\ApiIdempotency\Exceptions\PayloadMismatchException::class);
+        ->toThrow(PayloadMismatchException::class);
 
     Event::assertDispatched(IdempotentPayloadMismatch::class);
 });
@@ -161,7 +164,7 @@ it('handles middleware options for required', function () {
     $middleware = app(IdempotentMiddleware::class);
 
     expect(fn () => $middleware->handle($request, fn () => new Response('OK', 200), 'required'))
-        ->toThrow(\Grazulex\ApiIdempotency\Exceptions\MissingKeyException::class);
+        ->toThrow(MissingKeyException::class);
 });
 
 it('handles PUT method when configured', function () {
@@ -235,7 +238,7 @@ it('does not store 500 error responses', function () {
 
     try {
         $middleware->handle($request1, fn () => new Response('Server Error', 500));
-    } catch (\Throwable) {
+    } catch (Throwable) {
         // Ignore
     }
 

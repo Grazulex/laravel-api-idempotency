@@ -14,6 +14,7 @@ use Grazulex\ApiIdempotency\Exceptions\MissingKeyException;
 use Grazulex\ApiIdempotency\Exceptions\PayloadMismatchException;
 use Grazulex\ApiIdempotency\IdempotencyManager;
 use Grazulex\ApiIdempotency\Support\IdempotencyKey;
+use Grazulex\ApiIdempotency\Support\IdempotencyRecord;
 use Grazulex\ApiIdempotency\Support\PayloadFingerprint;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -35,7 +36,7 @@ class IdempotentMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(Request): (SymfonyResponse)  $next
+     * @param  Closure(Request): (SymfonyResponse)  $next
      */
     public function handle(Request $request, Closure $next, string ...$options): SymfonyResponse
     {
@@ -191,7 +192,7 @@ class IdempotentMiddleware
     }
 
     protected function handleExistingRecord(
-        \Grazulex\ApiIdempotency\Support\IdempotencyRecord $record,
+        IdempotencyRecord $record,
         Request $request,
         string $key,
         ?string $scope,

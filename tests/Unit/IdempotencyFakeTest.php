@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Grazulex\ApiIdempotency\Testing\IdempotencyFake;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use PHPUnit\Framework\AssertionFailedError;
 
 beforeEach(function () {
     $this->fake = new IdempotencyFake;
@@ -150,12 +151,12 @@ it('fails assertion for wrong status', function () {
     $this->fake->store('wrong_status_key', $response);
 
     expect(fn () => $this->fake->assertStoredWithStatus('wrong_status_key', 404))
-        ->toThrow(PHPUnit\Framework\AssertionFailedError::class);
+        ->toThrow(AssertionFailedError::class);
 });
 
 it('fails assertion when key not stored', function () {
     expect(fn () => $this->fake->assertStored('non_existent'))
-        ->toThrow(PHPUnit\Framework\AssertionFailedError::class);
+        ->toThrow(AssertionFailedError::class);
 });
 
 it('handles scoped assertions', function () {
