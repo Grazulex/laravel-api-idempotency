@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/Grazulex/laravel-api-idempotency/releases/tag/v1.2.0) (2026-10-08)
+
+### Changed
+
+- **Minimum PHP version is now 8.4**: PHP 8.3 is no longer supported (#6)
+- CI test matrix now runs PHP 8.4 and 8.5 (#6)
+
 ## [1.1.0](https://github.com/Grazulex/laravel-api-idempotency/releases/tag/v1.1.0) (2026-09-17)
 
 ### Added
