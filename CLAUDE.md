@@ -18,7 +18,7 @@ Ce package Laravel fournit une protection d'idempotence pour les APIs. Il cache 
 
 ## Technical Stack
 
-- **PHP**: 8.3+
+- **PHP**: 8.4+
 - **Laravel**: 11.x, 12.x
 - **Testing**: Pest PHP
 - **Static Analysis**: PHPStan (Larastan)
