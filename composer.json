@@ -30,13 +30,13 @@
         "illuminate/cache": "^12.0|^13.0"
     },
     "require-dev": {
-        "larastan/larastan": "^3.0",
-        "laravel/pint": "^1.22",
+        "larastan/larastan": "^3.13",
+        "laravel/pint": "^1.32",
         "orchestra/testbench": "^10.0|^11.0",
-        "pestphp/pest": "^3.8|^4.0",
-        "pestphp/pest-plugin-laravel": "^3.2|^4.0",
-        "phpstan/phpstan": "^2.0",
-        "rector/rector": "^2.0"
+        "pestphp/pest": "^3.8|^4.7",
+        "pestphp/pest-plugin-laravel": "^3.2|^4.1",
+        "phpstan/phpstan": "^2.3",
+        "rector/rector": "^2.8"
     },
     "autoload": {
         "psr-4": {
