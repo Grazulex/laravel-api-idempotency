@@ -173,6 +173,24 @@ $key = IdempotencyKey::fromData([
 
 ---
 
+## Idempotent HTTP Client
+
+Send outgoing requests with an idempotency key and retry them safely with the same key:
+
+```php
+use Illuminate\Support\Facades\Http;
+
+Http::withIdempotencyKey()->post($url, $data);                // auto-generated key
+Http::withIdempotencyKey('pay_order_456')->post($url, $data); // explicit key
+
+// Retry timeouts, 409, 425, 429 and 5xx up to 2 times, reusing the same key
+Http::withToken($token)
+    ->withIdempotencyKey(retries: 2, sleepMilliseconds: 200, prefix: 'pay')
+    ->post($url, $data);
+```
+
+---
+
 ## Artisan Commands
 
 ```bash

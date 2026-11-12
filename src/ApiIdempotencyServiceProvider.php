@@ -13,8 +13,10 @@ use Grazulex\ApiIdempotency\Drivers\CacheDriver;
 use Grazulex\ApiIdempotency\Drivers\DatabaseDriver;
 use Grazulex\ApiIdempotency\Drivers\DynamoDbDriver;
 use Grazulex\ApiIdempotency\Drivers\RedisDriver;
+use Grazulex\ApiIdempotency\Http\Client\IdempotentRequest;
 use Grazulex\ApiIdempotency\Http\Middleware\IdempotentMiddleware;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
@@ -49,6 +51,7 @@ class ApiIdempotencyServiceProvider extends ServiceProvider
 
         $this->registerMiddleware();
         $this->registerCommands();
+        $this->registerHttpClientMacros();
     }
 
     protected function resolveDriver(Application $app): StorageDriverInterface
@@ -71,6 +74,28 @@ class ApiIdempotencyServiceProvider extends ServiceProvider
         /** @var Router $router */
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('idempotent', IdempotentMiddleware::class);
+    }
+
+    /**
+     * Register the `withIdempotencyKey()` macro on the HTTP client.
+     *
+     * Usable as `Http::withIdempotencyKey()` or on any pending request.
+     */
+    protected function registerHttpClientMacros(): void
+    {
+        if (PendingRequest::hasMacro('withIdempotencyKey')) {
+            return;
+        }
+
+        PendingRequest::macro('withIdempotencyKey', function (
+            ?string $key = null,
+            int $retries = 0,
+            int $sleepMilliseconds = 100,
+            ?string $prefix = null,
+        ): PendingRequest {
+            /** @var PendingRequest $this */
+            return IdempotentRequest::apply($this, $key, $retries, $sleepMilliseconds, $prefix);
+        });
     }
 
     protected function registerCommands(): void
