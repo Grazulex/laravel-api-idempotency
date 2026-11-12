@@ -83,6 +83,10 @@ class IdempotentMiddleware
             return $this->handleExistingRecord($existingRecord, $request, $key, $scope, $fingerprint);
         }
 
+        // Validate the replayable status policy before running the request,
+        // so a misconfiguration never surfaces after side effects happened
+        $this->storeStatusRanges();
+
         // Try to acquire lock
         if (! $this->acquireLock($key, $scope, $request)) {
             throw new ConflictException(
@@ -295,10 +299,99 @@ class IdempotentMiddleware
 
     protected function shouldStoreResponse(SymfonyResponse $response): bool
     {
-        // Only store successful responses and some client errors
         $statusCode = $response->getStatusCode();
 
-        return $statusCode >= 200 && $statusCode < 500;
+        foreach ($this->storeStatusRanges() as [$min, $max]) {
+            if ($statusCode >= $min && $statusCode <= $max) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Resolve the `storage.store_statuses` policy into inclusive status ranges.
+     *
+     * Accepted entries: an exact status (201 or "201"), an inclusive range
+     * ("200-299") or a status class ("4xx"). When the key is missing or null,
+     * the default policy (200 to 499) applies.
+     *
+     * @return list<array{0: int, 1: int}>
+     *
+     * @throws \InvalidArgumentException
+     */
+    protected function storeStatusRanges(): array
+    {
+        $statuses = $this->manager->getConfig('storage.store_statuses');
+
+        if ($statuses === null) {
+            return [[200, 499]];
+        }
+
+        if (! is_array($statuses)) {
+            $statuses = [$statuses];
+        }
+
+        $ranges = [];
+
+        foreach ($statuses as $entry) {
+            $ranges[] = $this->parseStatusEntry($entry);
+        }
+
+        return $ranges;
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     *
+     * @throws \InvalidArgumentException
+     */
+    protected function parseStatusEntry(mixed $entry): array
+    {
+        if (is_int($entry)) {
+            return $this->validatedStatusRange($entry, $entry, $entry);
+        }
+
+        if (is_string($entry)) {
+            $value = strtolower(trim($entry));
+
+            if (preg_match('/^(\d{3})$/', $value, $matches) === 1) {
+                return $this->validatedStatusRange((int) $matches[1], (int) $matches[1], $entry);
+            }
+
+            if (preg_match('/^(\d{3})\s*-\s*(\d{3})$/', $value, $matches) === 1) {
+                return $this->validatedStatusRange((int) $matches[1], (int) $matches[2], $entry);
+            }
+
+            if (preg_match('/^([1-5])xx$/', $value, $matches) === 1) {
+                $class = (int) $matches[1] * 100;
+
+                return [$class, $class + 99];
+            }
+        }
+
+        throw new \InvalidArgumentException(sprintf(
+            'Invalid entry %s in api-idempotency.storage.store_statuses: use a status code (201), a range ("200-299") or a class ("4xx").',
+            is_scalar($entry) ? var_export($entry, true) : get_debug_type($entry),
+        ));
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     *
+     * @throws \InvalidArgumentException
+     */
+    protected function validatedStatusRange(int $min, int $max, mixed $entry): array
+    {
+        if ($min < 100 || $max > 599 || $min > $max) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid entry %s in api-idempotency.storage.store_statuses: statuses must be between 100 and 599, lowest first.',
+                var_export($entry, true),
+            ));
+        }
+
+        return [$min, $max];
     }
 
     protected function addResponseHeaders(

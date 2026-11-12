@@ -133,6 +133,13 @@ return [
             'Set-Cookie',
             'X-Request-Id',
         ],
+
+        // Response statuses stored for replay. Other responses are not stored
+        // and the key is released, so the client can retry with the same key.
+        // Entries: exact status (201), inclusive range ('200-299') or class ('4xx').
+        // Examples: ['2xx'] never replays errors, ['2xx', 422] also replays
+        // validation errors. null falls back to the default ('200-499').
+        'store_statuses' => ['200-499'],
     ],
 
     /*
