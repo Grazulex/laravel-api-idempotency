@@ -251,6 +251,119 @@ it('does not store 500 error responses', function () {
     expect($response2->getContent())->toBe('{"success": true}');
 });
 
+/**
+ * Send a first request answering $firstStatus, then a second one with the same key.
+ */
+function sendTwiceWithSameIdempotencyKey(string $key, int $firstStatus): Response
+{
+    $middleware = app(IdempotentMiddleware::class);
+
+    $request1 = Request::create('/api/test', 'POST');
+    $request1->headers->set('Idempotency-Key', $key);
+    $response1 = $middleware->handle($request1, fn () => new Response('first', $firstStatus));
+
+    expect($response1->getStatusCode())->toBe($firstStatus);
+
+    $request2 = Request::create('/api/test', 'POST');
+    $request2->headers->set('Idempotency-Key', $key);
+
+    /** @var Response $response2 */
+    $response2 = $middleware->handle($request2, fn () => new Response('second', 200));
+
+    return $response2;
+}
+
+it('keeps the default 200 to 499 policy when store_statuses is null', function () {
+    config(['api-idempotency.storage.store_statuses' => null]);
+
+    expect(sendTwiceWithSameIdempotencyKey('null_policy_4xx_key', 409)->getContent())->toBe('first');
+    expect(sendTwiceWithSameIdempotencyKey('null_policy_5xx_key', 503)->getContent())->toBe('second');
+    expect(sendTwiceWithSameIdempotencyKey('null_policy_1xx_key', 199)->getContent())->toBe('second');
+});
+
+it('never replays 4xx responses with a 2xx only policy', function () {
+    config(['api-idempotency.storage.store_statuses' => ['2xx']]);
+    $manager = app(IdempotencyManager::class);
+    $middleware = app(IdempotentMiddleware::class);
+
+    // The unstored error response must release the lock right away
+    $request = Request::create('/api/test', 'POST');
+    $request->headers->set('Idempotency-Key', 'only_2xx_lock_key');
+    $error = $middleware->handle($request, fn () => new Response('error', 422));
+
+    expect($error->getStatusCode())->toBe(422);
+    expect($manager->get('only_2xx_lock_key'))->toBeNull();
+    expect($manager->isLocked('only_2xx_lock_key'))->toBeFalse();
+
+    $response = sendTwiceWithSameIdempotencyKey('only_2xx_error_key', 422);
+
+    expect($response->getStatusCode())->toBe(200);
+    expect($response->getContent())->toBe('second');
+    expect($response->headers->get('X-Idempotent-Replayed'))->toBe('false');
+
+    $replayed = sendTwiceWithSameIdempotencyKey('only_2xx_success_key', 201);
+
+    expect($replayed->getStatusCode())->toBe(201);
+    expect($replayed->getContent())->toBe('first');
+    expect($replayed->headers->get('X-Idempotent-Replayed'))->toBe('true');
+});
+
+it('replays only the listed business errors', function () {
+    config(['api-idempotency.storage.store_statuses' => ['200-299', 422, '402']]);
+
+    expect(sendTwiceWithSameIdempotencyKey('listed_422_key', 422)->getContent())->toBe('first');
+    expect(sendTwiceWithSameIdempotencyKey('listed_402_key', 402)->getContent())->toBe('first');
+    expect(sendTwiceWithSameIdempotencyKey('unlisted_400_key', 400)->getContent())->toBe('second');
+    expect(sendTwiceWithSameIdempotencyKey('unlisted_404_key', 404)->getContent())->toBe('second');
+});
+
+it('can replay server errors when configured', function () {
+    config(['api-idempotency.storage.store_statuses' => ['2xx', '503']]);
+
+    $response = sendTwiceWithSameIdempotencyKey('replay_503_key', 503);
+
+    expect($response->getStatusCode())->toBe(503);
+    expect($response->getContent())->toBe('first');
+});
+
+it('stores nothing with an empty store_statuses list', function () {
+    config(['api-idempotency.storage.store_statuses' => []]);
+
+    expect(sendTwiceWithSameIdempotencyKey('empty_policy_key', 201)->getContent())->toBe('second');
+});
+
+it('accepts a single status class as store_statuses', function () {
+    config(['api-idempotency.storage.store_statuses' => '2XX']);
+
+    expect(sendTwiceWithSameIdempotencyKey('scalar_policy_ok_key', 200)->getContent())->toBe('first');
+    expect(sendTwiceWithSameIdempotencyKey('scalar_policy_ko_key', 400)->getContent())->toBe('second');
+});
+
+it('rejects an invalid store_statuses entry before running the request', function (mixed $entry) {
+    config(['api-idempotency.storage.store_statuses' => [$entry]]);
+    $manager = app(IdempotencyManager::class);
+    $middleware = app(IdempotentMiddleware::class);
+
+    $request = Request::create('/api/test', 'POST');
+    $request->headers->set('Idempotency-Key', 'invalid_policy_key');
+
+    $executed = false;
+
+    expect(fn () => $middleware->handle($request, function () use (&$executed) {
+        $executed = true;
+
+        return new Response('OK', 200);
+    }))->toThrow(InvalidArgumentException::class, 'store_statuses');
+
+    expect($executed)->toBeFalse();
+    expect($manager->isLocked('invalid_policy_key'))->toBeFalse();
+})->with([
+    'unknown string' => ['success'],
+    'reversed range' => ['499-200'],
+    'out of bounds' => [600],
+    'float' => [200.0],
+]);
+
 it('uses custom header name from config', function () {
     config(['api-idempotency.header' => 'X-Request-Id']);
 
