@@ -7,6 +7,8 @@ namespace Grazulex\ApiIdempotency;
 use DateTimeImmutable;
 use Grazulex\ApiIdempotency\Contracts\StorageDriverInterface;
 use Grazulex\ApiIdempotency\Support\IdempotencyRecord;
+use Grazulex\ApiIdempotency\Support\ResponseBodyCipher;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -15,20 +17,34 @@ class IdempotencyManager
 {
     protected bool $shouldSkip = false;
 
+    protected ResponseBodyCipher $cipher;
+
     /**
      * @param  array<string, mixed>  $config
      */
     public function __construct(
         protected StorageDriverInterface $driver,
         protected array $config,
-    ) {}
+        ?ResponseBodyCipher $cipher = null,
+    ) {
+        $this->cipher = $cipher ?? new ResponseBodyCipher;
+    }
 
     /**
-     * Get a stored idempotency record.
+     * Get a stored idempotency record, with its response body decrypted.
+     *
+     * @throws DecryptException when an encrypted body cannot be decrypted;
+     *                          the request is never re-executed in that case
      */
     public function get(string $key, ?string $scope = null): ?IdempotencyRecord
     {
-        return $this->driver->get($key, $scope);
+        $record = $this->driver->get($key, $scope);
+
+        if ($record === null || ! ResponseBodyCipher::isEncrypted($record->responseBody)) {
+            return $record;
+        }
+
+        return $record->withResponseBody($this->cipher->decrypt((string) $record->responseBody));
     }
 
     /**
@@ -55,6 +71,10 @@ class IdempotencyManager
             ARRAY_FILTER_USE_KEY
         );
 
+        if ($body !== null && $this->shouldEncrypt()) {
+            $body = $this->cipher->encrypt($body);
+        }
+
         $ttl = $this->config['ttl'] ?? 86400;
         $now = new DateTimeImmutable;
 
@@ -67,7 +87,7 @@ class IdempotencyManager
             statusCode: $response->getStatusCode(),
             responseHeaders: $headers,
             responseBody: $body,
-            responseSize: $bodySize,
+            responseSize: $bodySize, // size of the plain body, also when encrypted
             state: 'completed',
             createdAt: $now,
             expiresAt: $now->modify("+{$ttl} seconds"),
@@ -145,7 +165,8 @@ class IdempotencyManager
     }
 
     /**
-     * Get a list of recent records.
+     * Get a list of recent records. Response bodies are returned as stored (encrypted when
+     * `storage.encrypt` is on); use get() to read a record's body.
      *
      * @return array<IdempotencyRecord>
      */
@@ -176,6 +197,14 @@ class IdempotencyManager
     public function getHeaderName(): string
     {
         return $this->config['header'] ?? 'Idempotency-Key';
+    }
+
+    /**
+     * Check if stored response bodies are encrypted.
+     */
+    public function shouldEncrypt(): bool
+    {
+        return (bool) ($this->config['storage']['encrypt'] ?? false);
     }
 
     /**

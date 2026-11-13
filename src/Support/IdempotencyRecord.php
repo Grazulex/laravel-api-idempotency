@@ -51,6 +51,26 @@ class IdempotencyRecord implements Arrayable, JsonSerializable
         return $this->expiresAt < new DateTimeImmutable;
     }
 
+    public function withResponseBody(?string $responseBody): self
+    {
+        return new self(
+            key: $this->key,
+            scope: $this->scope,
+            fingerprint: $this->fingerprint,
+            method: $this->method,
+            path: $this->path,
+            statusCode: $this->statusCode,
+            responseHeaders: $this->responseHeaders,
+            responseBody: $responseBody,
+            responseSize: $this->responseSize,
+            state: $this->state,
+            createdAt: $this->createdAt,
+            expiresAt: $this->expiresAt,
+            lockedUntil: $this->lockedUntil,
+            hitCount: $this->hitCount,
+        );
+    }
+
     public function toResponse(): Response
     {
         $response = new Response(
