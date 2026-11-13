@@ -140,6 +140,15 @@ return [
         // Examples: ['2xx'] never replays errors, ['2xx', 422] also replays
         // validation errors. null falls back to the default ('200-499').
         'store_statuses' => ['200-499'],
+
+        // Encrypt stored response bodies with the application key (APP_KEY),
+        // for every driver. Use it when responses carry personal or payment
+        // data. Headers are not encrypted: drop sensitive ones with
+        // exclude_headers. Records stored before enabling it stay readable,
+        // and so do encrypted records after disabling it (APP_KEY is still
+        // needed for those). Rotate APP_KEY with APP_PREVIOUS_KEYS, otherwise
+        // existing encrypted records can no longer be replayed.
+        'encrypt' => env('API_IDEMPOTENCY_ENCRYPT', false),
     ],
 
     /*

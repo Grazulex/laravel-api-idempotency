@@ -274,6 +274,12 @@ return [
         'exclude_fields' => ['timestamp', 'nonce'],
     ],
 
+    'storage' => [
+        'max_body_size' => 1048576, // 1 MB
+        'exclude_headers' => ['Set-Cookie', 'X-Request-Id'],
+        'encrypt' => env('API_IDEMPOTENCY_ENCRYPT', false), // encrypt stored bodies with APP_KEY
+    ],
+
     'scope' => [
         'enabled' => true,
         'resolver' => 'user', // user, tenant, ip, or callable
@@ -286,6 +292,14 @@ return [
     ],
 ];
 ```
+
+### Encrypting stored responses
+
+Stored response bodies are kept in clear text by default. When they carry payment or personal data, set `API_IDEMPOTENCY_ENCRYPT=true` (or `storage.encrypt`): bodies are then encrypted with the application key (`APP_KEY`) before they reach the cache, Redis, the database or DynamoDB, and decrypted when a request is replayed.
+
+- Headers are not encrypted; drop sensitive ones with `storage.exclude_headers`.
+- Records stored before you enable it stay readable, and encrypted records stay readable after you disable it (they still need `APP_KEY`).
+- Rotate `APP_KEY` with `APP_PREVIOUS_KEYS`. A body that can no longer be decrypted throws `Illuminate\Contracts\Encryption\DecryptException`: the request is neither replayed nor run a second time.
 
 ---
 
